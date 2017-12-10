@@ -14,16 +14,23 @@ import java.util.Set;
 
 public class Indexer {
 
-	int totalDocs = 0;
-	private Map<String, List<Integer>> td; // Term to document IDs
+	private static int totalDocsCorpus = 0;
+	private int totalDocs;
+	
+	// Term to document IDs for this class
+	private Map<String, List<Integer>> td;
+	
+	// This is all terms in the whole corpus and it maps it to the number of documents with this term regardless of class
+	private static Map<String, Integer> allTerms;
 	
 	public Indexer() {
 		td = new HashMap<String, List<Integer>> ();
+		allTerms = new HashMap<String, Integer> ();
 	}
 	
 	public void indexDirectory(String path) throws IOException {
 		final Path currentWorkingPath = Paths.get(path).toAbsolutePath();
-		int totalDocs = 0;
+		
 		// the list of file names that were processed.
 		List<String> fileNames = new ArrayList<String>();
 		
@@ -41,9 +48,9 @@ public class Indexer {
 			}
 
 			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-				// only process .json files
+				// only process .txt files
 				if (file.toString().endsWith(".txt")) {
-					// we have found a .json file; add its name to the fileName list,
+					// we have found a .txt file;
 					// then index the file and increase the document ID counter.
 					addTokens(file.toFile(), documentID++);
 				}
@@ -60,6 +67,7 @@ public class Indexer {
 	private void addTokens(File file, int docId) {
 		String term;
 		totalDocs ++;
+		totalDocsCorpus ++;
 		// Map to keep track of term Frequency inside each document.
 		SimpleTokenStream sp = new SimpleTokenStream(file);
 		
@@ -87,19 +95,39 @@ public class Indexer {
 
 	}
 	private void addTD(String term, int docId) {
-		if(!td.containsKey(term)) { // Add term and documentID
+		
+		// Add term and documentID to the term index for this class
+		if(!td.containsKey(term)) { 
 			List<Integer>docs = new ArrayList<Integer>();
 			docs.add(docId);
 			td.put(term, docs);
 		} else {
-			List<Integer>docs =td.get(term);
+			List<Integer>docs = td.get(term);
 			if(!docs.contains(docId)) {
 				docs.add(docId);
 				td.replace(term, docs);
 			}
 		}
+		
+		// Add term and number of total documents it appears in
+		if(allTerms.containsKey(term)) {
+			allTerms.replace(term, td.get(term).size());
+		} else {
+			allTerms.put(term, td.get(term).size());
+		}
 	}
+	
 	public Map<String, List<Integer>> getTD() {
 		return td;
+	}
+	
+	public Map<String, Integer> getAllTerms() {
+		return allTerms;
+	}
+	public int getTotalDocs() {
+		return totalDocs;
+	}
+	public int getTotalDocsCorpus() {
+		return totalDocsCorpus;
 	}
 }
