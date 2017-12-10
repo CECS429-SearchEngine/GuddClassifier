@@ -41,22 +41,28 @@ public class BayesianClassification {
 		for(int i = 0; i < 50 && !pq.isEmpty(); i++) {
 			TermScore term = pq.poll();
 			discriminatingTerms.add(term.getTerm());
-			System.out.println(term.getTerm() + ": " + term.getScore());
+			//System.out.println(term.getTerm() + ": " + term.getScore());
 		}
 		return discriminatingTerms;
 	}
 	
 	public static void main(String [] args) {
 		
-		String [] authors = {"c1", "c2", "c3"};
+		String [] authors = {"MADISON", "HAMILTON", "JAY"};
 		Map<String, Indexer> classTerms = new HashMap<String, Indexer>(); // authors to terms
 		try {
 			for(String author : authors) {
 				Indexer i = new Indexer();
-				i.indexDirectory("/Users/crystalchun/Developer/Java/Classification/ex2/" + author);
+				i.indexDirectory("/Users/crystalchun/Developer/Java/Classification/federalist-papers/" + author);
 				classTerms.put(author, i);
 			}
-			getDiscrim(classTerms);
+			Map<String, Map<String, Double>> probs = getProbabilities(classTerms, getDiscrim(classTerms));
+			SimpleIndexer si = new SimpleIndexer();
+			si.indexDirectory("/Users/crystalchun/Developer/Java/Classification/federalist-papers/DISPUTED");
+			for(int i : si.getTerms().keySet()) {
+				System.out.println("Document number: " + i);
+				classify(classTerms, si.getTerms().get(i), probs);
+			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -79,5 +85,59 @@ public class BayesianClassification {
 		ans += Double.isNaN(operand3)? 0 : operand3;
 		ans += Double.isNaN(operand4)? 0 : operand4;
 		return ans;
+	}
+	
+	public static Map<String, Map<String, Double>> getProbabilities(Map<String, Indexer> classTerms, List<String> terms) {
+		Map<String, Map<String, Double>> classTermProbabilities = new HashMap<String, Map<String, Double>> (); // Maps a class to the term and probability
+		
+		for(String author: classTerms.keySet()) {
+			// For every class
+			System.out.println(author);
+			Map<String, List<Posting>> td = classTerms.get(author).getTD();
+			Map<String, Double> termProbability = new HashMap<String, Double>();
+			
+			// For every term in discriminating term set
+			for(String t: terms) {
+				int freq = 1; // ftc
+				
+				if(td.containsKey(t)) {
+					// Get the term's frequency
+					for(Posting p : td.get(t)) {
+						freq += p.getFreq();
+					}
+				}
+				
+				double probability = (double) freq / ((double)td.size() + terms.size());
+				termProbability.put(t, probability);
+				//System.out.println(t + " " + probability);
+			}
+			classTermProbabilities.put(author, termProbability);
+		}
+		return classTermProbabilities;
+	}
+	
+	public static String classify(Map<String, Indexer> classTerms, List<String>terms, Map<String, Map<String, Double>> classProbabilities) {
+		double n = Indexer.getTotalDocsCorpus();
+		double highest = 0;
+		String classBelongsIn = "";
+		
+		for(String author : classTerms.keySet()) {
+			Indexer index = classTerms.get(author);
+			double nc = index.getTotalDocs();
+			double score = Math.log(nc/n);
+			Map<String, Double> probabilities = classProbabilities.get(author);
+			
+			for(String term : terms) {
+				if(probabilities.containsKey(term)) {
+					score += probabilities.get(term);
+				}
+			}
+			if(score > highest) {
+				highest = score;
+				classBelongsIn = author;
+			}
+		}
+		System.out.println(highest + " " + classBelongsIn);
+		return classBelongsIn;
 	}
 }

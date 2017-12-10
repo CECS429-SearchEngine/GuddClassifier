@@ -12,31 +12,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class Indexer {
-
-	private static int totalDocsCorpus = 0;
-	private int totalDocs;
-	
-	// Term to document IDs for this class
-	private Map<String, List<Posting>> td;
-	
-	// This is all terms in the whole corpus and it maps it to the number of documents with this term regardless of class
-	private static Map<String, Integer> allTerms = new HashMap<String, Integer> ();
-	
-	public Indexer() {
-		td = new HashMap<String, List<Posting>> ();
+public class SimpleIndexer {
+	private Map<Integer, List<String>> terms;
+	public SimpleIndexer() {
+		terms = new HashMap<Integer, List<String>> ();
 	}
-	
+	public Map<Integer, List<String>> getTerms() {
+		return terms;
+	}
 	public void indexDirectory(String path) throws IOException {
 		final Path currentWorkingPath = Paths.get(path).toAbsolutePath();
 		
-		// the list of file names that were processed.
-		List<String> fileNames = new ArrayList<String>();
 		
 		// This is our standard "walk through all .json files" code.
 		Files.walkFileTree(currentWorkingPath, new SimpleFileVisitor<Path>() {
-			int documentID = 0;
-
+			int docID = 0;
 			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
 				// make sure we only process the current working directory.
 				if (currentWorkingPath.equals(dir)) {
@@ -51,7 +41,7 @@ public class Indexer {
 				if (file.toString().endsWith(".txt")) {
 					// we have found a .txt file;
 					// then index the file and increase the document ID counter.
-					addTokens(file.toFile(), documentID++);
+					addTokens(file.toFile(), docID ++);
 				}
 				return FileVisitResult.CONTINUE;
 			}
@@ -63,13 +53,11 @@ public class Indexer {
 		});
 	}
 	
-	private void addTokens(File file, int docId) {
+	private void addTokens(File file, int docID) {
 		String term;
-		totalDocs ++;
-		totalDocsCorpus ++;
 		// Map to keep track of term Frequency inside each document.
 		SimpleTokenStream sp = new SimpleTokenStream(file);
-		
+		List<String> allTerms = new ArrayList <String> ();
 		while (sp.hasNextToken()) {
 			String type = sp.nextToken();
 			
@@ -82,55 +70,16 @@ public class Indexer {
 				
 				for (String each : types) {
 					term = Normalizer.stem(each);
-					addTD(term, docId);
+					allTerms.add(term);
 				}
 			} else {
 				// Add the type to the KGramIndex and the term (stemmed type) into the PositionalInvertedIndex
 				term = Normalizer.stem(type);
-				addTD(term, docId);
+				allTerms.add(term);
 			}
 			
 		}
+		terms.put(docID, allTerms);
 
-	}
-	private void addTD(String term, int docId) {
-		
-		// Add term and documentID to the term index for this class
-		if(!td.containsKey(term)) { 
-			List<Posting>docs = new ArrayList<Posting>();
-			docs.add(new Posting(docId, 1));
-			td.put(term, docs);
-			if(allTerms.containsKey(term)) {
-				allTerms.replace(term, allTerms.get(term) + 1);
-			} else {
-				allTerms.put(term, 1);
-			}
-		} else { // Term has already been found for this class
-			List<Posting>docs = td.get(term);
-			
-			// Is this the same document? 
-			if(docs.get(docs.size() - 1).getDocID() < docId) { // No
-				docs.add(new Posting(docId, 1)); // Add new posting
-				td.replace(term, docs);
-				allTerms.replace(term, allTerms.get(term) + 1); // increment num docs
-			} else { // Yes
-				docs.get(docs.size() - 1).incrementFrequency(); // Just increment its frequency
-			}
-		}
-		
-	}
-	
-	public Map<String, List<Posting>> getTD() {
-		return td;
-	}
-	
-	public static Map<String, Integer> getAllTerms() {
-		return allTerms;
-	}
-	public int getTotalDocs() {
-		return totalDocs;
-	}
-	public static int getTotalDocsCorpus() {
-		return totalDocsCorpus;
 	}
 }
