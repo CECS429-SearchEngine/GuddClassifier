@@ -17,7 +17,7 @@ public class BayesianClassification {
 			n = Indexer.getTotalDocsCorpus(); // Total number of documents in whole corpus
 			int n1x = i.getTotalDocs(); // Total number of documents in this class
 			Map<String, List<Posting>> td = i.getTD();
-			//System.out.println(author);
+			System.out.println(author);
 			for(String term: td.keySet()) {
 				int n11 = td.get(term).size(); // Total number of documents with this term in this class
 				int nx1 = Indexer.getAllTerms().get(term); // Total number of documents with this term regardless of class
@@ -34,11 +34,13 @@ public class BayesianClassification {
 					System.out.println(term);
 					System.out.println("DocID: " + p.getDocID() + " Frequency: " + p.getFreq());
 				}*/
+				
 			}
+			System.out.println(pq.peek().getScore() + " " + pq.peek().getTerm());
 		}
 		
 		// Gets top 50 terms from priority queue and adds to list 
-		for(int i = 0; i < 50 && !pq.isEmpty(); i++) {
+		for(int i = 0; i < 100 && !pq.isEmpty(); i++) {
 			TermScore term = pq.poll();
 			discriminatingTerms.add(term.getTerm());
 			//System.out.println(term.getTerm() + ": " + term.getScore());
@@ -49,17 +51,22 @@ public class BayesianClassification {
 	public static void main(String [] args) {
 		
 		String [] authors = {"MADISON", "HAMILTON", "JAY"};
+		//String [] authors = {"c1" , "c2" , "c3" };
 		Map<String, Indexer> classTerms = new HashMap<String, Indexer>(); // authors to terms
 		try {
 			for(String author : authors) {
 				Indexer i = new Indexer();
 				i.indexDirectory("/Users/crystalchun/Developer/Java/Classification/federalist-papers/" + author);
+				//i.indexDirectory("/Users/crystalchun/Developer/Java/Classification/ex/" + author);
 				classTerms.put(author, i);
 			}
 			Map<String, Map<String, Double>> probs = getProbabilities(classTerms, getDiscrim(classTerms));
 			SimpleIndexer si = new SimpleIndexer();
 			si.indexDirectory("/Users/crystalchun/Developer/Java/Classification/federalist-papers/DISPUTED");
+			//si.indexDirectory("/Users/crystalchun/Developer/Java/Classification/dx");
+			System.out.println("\n\nDISPUTED DOCUMENTS: ");
 			for(int i : si.getTerms().keySet()) {
+				//System.out.println("Document number: " + i + " contents: " + si.getTerms().get(i));
 				System.out.println("Document number: " + i);
 				classify(classTerms, si.getTerms().get(i), probs);
 			}
@@ -92,7 +99,7 @@ public class BayesianClassification {
 		
 		for(String author: classTerms.keySet()) {
 			// For every class
-			System.out.println(author);
+			//System.out.println(author);
 			Map<String, List<Posting>> td = classTerms.get(author).getTD();
 			Map<String, Double> termProbability = new HashMap<String, Double>();
 			
@@ -118,7 +125,7 @@ public class BayesianClassification {
 	
 	public static String classify(Map<String, Indexer> classTerms, List<String>terms, Map<String, Map<String, Double>> classProbabilities) {
 		double n = Indexer.getTotalDocsCorpus();
-		double highest = 0;
+		double highest = Double.NEGATIVE_INFINITY;
 		String classBelongsIn = "";
 		
 		for(String author : classTerms.keySet()) {
@@ -132,6 +139,7 @@ public class BayesianClassification {
 					score += probabilities.get(term);
 				}
 			}
+			//System.out.println(author +" " +score);
 			if(score > highest) {
 				highest = score;
 				classBelongsIn = author;
