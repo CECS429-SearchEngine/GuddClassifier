@@ -18,14 +18,13 @@ public class Indexer {
 	private int totalDocs;
 	
 	// Term to document IDs for this class
-	private Map<String, List<Integer>> td;
+	private Map<String, List<Posting>> td;
 	
 	// This is all terms in the whole corpus and it maps it to the number of documents with this term regardless of class
-	private static Map<String, Integer> allTerms;
+	private static Map<String, Integer> allTerms = new HashMap<String, Integer> ();
 	
 	public Indexer() {
-		td = new HashMap<String, List<Integer>> ();
-		allTerms = new HashMap<String, Integer> ();
+		td = new HashMap<String, List<Posting>> ();
 	}
 	
 	public void indexDirectory(String path) throws IOException {
@@ -98,36 +97,42 @@ public class Indexer {
 		
 		// Add term and documentID to the term index for this class
 		if(!td.containsKey(term)) { 
-			List<Integer>docs = new ArrayList<Integer>();
-			docs.add(docId);
+			List<Posting>docs = new ArrayList<Posting>();
+			docs.add(new Posting(docId, 1));
 			td.put(term, docs);
-		} else {
-			List<Integer>docs = td.get(term);
-			if(!docs.contains(docId)) {
-				docs.add(docId);
+			if(allTerms.containsKey(term)) {
+				allTerms.replace(term, allTerms.get(term) + 1);
+			} else {
+				allTerms.put(term, 1);
+			}
+		} else { // Term has already been found for this class
+			List<Posting>docs = td.get(term);
+			
+			// Is this the same document? 
+			if(docs.get(docs.size() - 1).getDocID() < docId) { // No
+				docs.add(new Posting(docId, 1)); // Add new posting
 				td.replace(term, docs);
+				allTerms.replace(term, allTerms.get(term) + 1); // increment num docs
+			} else { // Yes
+				docs.get(docs.size() - 1).incrementFrequency(); // Just increment its frequency
 			}
 		}
 		
 		// Add term and number of total documents it appears in
-		if(allTerms.containsKey(term)) {
-			allTerms.replace(term, td.get(term).size());
-		} else {
-			allTerms.put(term, td.get(term).size());
-		}
+		
 	}
 	
-	public Map<String, List<Integer>> getTD() {
+	public Map<String, List<Posting>> getTD() {
 		return td;
 	}
 	
-	public Map<String, Integer> getAllTerms() {
+	public static Map<String, Integer> getAllTerms() {
 		return allTerms;
 	}
 	public int getTotalDocs() {
 		return totalDocs;
 	}
-	public int getTotalDocsCorpus() {
+	public static int getTotalDocsCorpus() {
 		return totalDocsCorpus;
 	}
 }
