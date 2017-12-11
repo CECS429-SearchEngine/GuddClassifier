@@ -70,12 +70,14 @@ public class SimpleIndexer {
 				
 				for (String each : types) {
 					term = Normalizer.stem(each);
-					allTerms.add(term);
+					if(!allTerms.contains(term))
+						allTerms.add(term);
 				}
 			} else {
 				// Add the type to the KGramIndex and the term (stemmed type) into the PositionalInvertedIndex
 				term = Normalizer.stem(type);
-				allTerms.add(term);
+				if(!allTerms.contains(term))
+					allTerms.add(term);
 			}
 			
 		}

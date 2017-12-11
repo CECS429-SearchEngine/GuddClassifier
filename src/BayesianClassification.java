@@ -17,7 +17,7 @@ public class BayesianClassification {
 			n = Indexer.getTotalDocsCorpus(); // Total number of documents in whole corpus
 			int n1x = i.getTotalDocs(); // Total number of documents in this class
 			Map<String, List<Posting>> td = i.getTD();
-			System.out.println(author);
+			//System.out.println(author);
 			for(String term: td.keySet()) {
 				int n11 = td.get(term).size(); // Total number of documents with this term in this class
 				int nx1 = Indexer.getAllTerms().get(term); // Total number of documents with this term regardless of class
@@ -35,14 +35,26 @@ public class BayesianClassification {
 					System.out.println("DocID: " + p.getDocID() + " Frequency: " + p.getFreq());
 				}*/
 				
-			}
-			System.out.println(pq.peek().getScore() + " " + pq.peek().getTerm());
+			} 
+			
+			//System.out.println(pq.peek().getScore() + " " + pq.peek().getTerm());
 		}
 		
-		// Gets top 50 terms from priority queue and adds to list 
-		for(int i = 0; i < 100 && !pq.isEmpty(); i++) {
+		// k values
+		// 4 = 2 hamilton, rest madison
+		// 3 = about half and half
+		// 2 = Mostly hamilton with 2 madison
+		// 1 = all hamilton
+		// 5+ = all madison
+		// 31 to 80 = all madison and one jay
+		// 200 = 2 hamilton and rest madison
+		// 400 = 2 hamilton and rest madison
+		for(int i = 0; i < 3 && !pq.isEmpty(); i++) {
 			TermScore term = pq.poll();
-			discriminatingTerms.add(term.getTerm());
+			if(!discriminatingTerms.contains(term.getTerm()))
+				discriminatingTerms.add(term.getTerm());
+			else
+				i--;
 			//System.out.println(term.getTerm() + ": " + term.getScore());
 		}
 		return discriminatingTerms;
@@ -50,20 +62,20 @@ public class BayesianClassification {
 	
 	public static void main(String [] args) {
 		
-		String [] authors = {"MADISON", "HAMILTON", "JAY"};
-		//String [] authors = {"c1" , "c2" , "c3" };
+		String [] authors = {"federalist-papers/MADISON", "federalist-papers/HAMILTON", "federalist-papers/JAY", "federalist-papers/DISPUTED"};
+		//String [] authors = {"ex/c1" , "ex/c2" , "ex/c3", "dx" };
 		Map<String, Indexer> classTerms = new HashMap<String, Indexer>(); // authors to terms
 		try {
-			for(String author : authors) {
-				Indexer i = new Indexer();
-				i.indexDirectory("/Users/crystalchun/Developer/Java/Classification/federalist-papers/" + author);
-				//i.indexDirectory("/Users/crystalchun/Developer/Java/Classification/ex/" + author);
-				classTerms.put(author, i);
+			for(int i = 0; i < authors.length - 1; i++) {
+				Indexer j = new Indexer();
+				//i.indexDirectory("/Users/crystalchun/Developer/Java/Classification/federalist-papers/" + author);
+				j.indexDirectory("/Users/crystalchun/Developer/Java/Classification/" + authors[i]);
+				classTerms.put(authors[i], j);
 			}
 			Map<String, Map<String, Double>> probs = getProbabilities(classTerms, getDiscrim(classTerms));
 			SimpleIndexer si = new SimpleIndexer();
-			si.indexDirectory("/Users/crystalchun/Developer/Java/Classification/federalist-papers/DISPUTED");
-			//si.indexDirectory("/Users/crystalchun/Developer/Java/Classification/dx");
+			//si.indexDirectory("/Users/crystalchun/Developer/Java/Classification/federalist-papers/DISPUTED");
+			si.indexDirectory("/Users/crystalchun/Developer/Java/Classification/" + authors[authors.length - 1]);
 			System.out.println("\n\nDISPUTED DOCUMENTS: ");
 			for(int i : si.getTerms().keySet()) {
 				//System.out.println("Document number: " + i + " contents: " + si.getTerms().get(i));
@@ -103,9 +115,19 @@ public class BayesianClassification {
 			Map<String, List<Posting>> td = classTerms.get(author).getTD();
 			Map<String, Double> termProbability = new HashMap<String, Double>();
 			
+			// Summation of all distinguishing terms' frequencies in this class
+			double freqTermsInThisClass = 0;
+			for(String dt: terms) {
+				if(td.containsKey(dt)) {
+					for(Posting p : td.get(dt))
+						freqTermsInThisClass += p.getFreq();
+				}
+			}
+			double totalNumberTermsInDiscrim = terms.size();
+			
 			// For every term in discriminating term set
 			for(String t: terms) {
-				int freq = 1; // ftc
+				double freq = 1; // ftc
 				
 				if(td.containsKey(t)) {
 					// Get the term's frequency
@@ -114,7 +136,11 @@ public class BayesianClassification {
 					}
 				}
 				
-				double probability = (double) freq / ((double)td.size() + terms.size());
+				
+				double denominator = freqTermsInThisClass + totalNumberTermsInDiscrim;
+				double probability = freq / denominator;
+				//System.out.println(terms.size());
+				//System.out.println("Author: " + author + " term: " + t + " probability: " + probability);
 				termProbability.put(t, probability);
 				//System.out.println(t + " " + probability);
 			}
@@ -129,16 +155,22 @@ public class BayesianClassification {
 		String classBelongsIn = "";
 		
 		for(String author : classTerms.keySet()) {
+			//System.out.println(author);
 			Indexer index = classTerms.get(author);
 			double nc = index.getTotalDocs();
-			double score = Math.log(nc/n);
+			//double score = Math.log(nc/n);
+			double score = Math.log10(nc/n);
+			//System.out.println(score);
 			Map<String, Double> probabilities = classProbabilities.get(author);
-			
+			double sum = 0;
 			for(String term : terms) {
 				if(probabilities.containsKey(term)) {
-					score += probabilities.get(term);
+					//System.out.println("Term: " + term + " probability: " + probabilities.get(term));
+					sum += Math.log10(probabilities.get(term));
 				}
 			}
+			//System.out.println(sum);
+			score += sum;
 			//System.out.println(author +" " +score);
 			if(score > highest) {
 				highest = score;
