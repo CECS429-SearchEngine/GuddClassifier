@@ -13,6 +13,7 @@ public class BayesianClassification {
 
 		int n = 0;
 		for(String author : classTerms.keySet()) {
+			//System.out.println(author);
 			Indexer i = classTerms.get(author);
 			n = Indexer.getTotalDocsCorpus(); // Total number of documents in whole corpus
 			int n1x = i.getTotalDocs(); // Total number of documents in this class
@@ -34,6 +35,10 @@ public class BayesianClassification {
 					System.out.println(term);
 					System.out.println("DocID: " + p.getDocID() + " Frequency: " + p.getFreq());
 				}*/
+				/*if(ts.getScore() > 0.3) {
+					System.out.println(term);
+					System.out.println(ts.getScore());
+				}*/
 				
 			} 
 			
@@ -49,7 +54,8 @@ public class BayesianClassification {
 		// 31 to 80 = all madison and one jay
 		// 200 = 2 hamilton and rest madison
 		// 400 = 2 hamilton and rest madison
-		for(int i = 0; i < 3 && !pq.isEmpty(); i++) {
+		// Gets the top scoring discriminating terms
+		for(int i = 0; i < 50 && !pq.isEmpty(); i++) {
 			TermScore term = pq.poll();
 			if(!discriminatingTerms.contains(term.getTerm()))
 				discriminatingTerms.add(term.getTerm());
@@ -79,7 +85,7 @@ public class BayesianClassification {
 			System.out.println("\n\nDISPUTED DOCUMENTS: ");
 			for(int i : si.getTerms().keySet()) {
 				//System.out.println("Document number: " + i + " contents: " + si.getTerms().get(i));
-				System.out.println("Document number: " + i);
+				System.out.println("Document number: " + i + " Document name: " + si.getFileNames().get(i));
 				classify(classTerms, si.getTerms().get(i), probs);
 			}
 		} catch (IOException e) {
@@ -119,8 +125,11 @@ public class BayesianClassification {
 			double freqTermsInThisClass = 0;
 			for(String dt: terms) {
 				if(td.containsKey(dt)) {
-					for(Posting p : td.get(dt))
+					for(Posting p : td.get(dt)) {
 						freqTermsInThisClass += p.getFreq();
+						//System.out.println(dt + " doc:" + p.getDocID() + " " + p.getFreq());
+					}
+						
 				}
 			}
 			double totalNumberTermsInDiscrim = terms.size();
@@ -138,6 +147,7 @@ public class BayesianClassification {
 				
 				
 				double denominator = freqTermsInThisClass + totalNumberTermsInDiscrim;
+				//System.out.println("size of discrim:" +totalNumberTermsInDiscrim + " sum: " + freqTermsInThisClass + " denom:" + denominator);
 				double probability = freq / denominator;
 				//System.out.println(terms.size());
 				//System.out.println("Author: " + author + " term: " + t + " probability: " + probability);
@@ -159,6 +169,7 @@ public class BayesianClassification {
 			Indexer index = classTerms.get(author);
 			double nc = index.getTotalDocs();
 			//double score = Math.log(nc/n);
+			//System.out.println(Math.log(nc/n));
 			double score = Math.log10(nc/n);
 			//System.out.println(score);
 			Map<String, Double> probabilities = classProbabilities.get(author);
@@ -171,7 +182,7 @@ public class BayesianClassification {
 			}
 			//System.out.println(sum);
 			score += sum;
-			//System.out.println(author +" " +score);
+			System.out.println(author +" " +score);
 			if(score > highest) {
 				highest = score;
 				classBelongsIn = author;

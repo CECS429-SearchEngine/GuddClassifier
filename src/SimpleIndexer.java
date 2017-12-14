@@ -14,11 +14,16 @@ import java.util.Set;
 
 public class SimpleIndexer {
 	private Map<Integer, List<String>> terms;
+	private List<String> fileNames;
 	public SimpleIndexer() {
 		terms = new HashMap<Integer, List<String>> ();
+		fileNames = new ArrayList<String> ();
 	}
 	public Map<Integer, List<String>> getTerms() {
 		return terms;
+	}
+	public List<String> getFileNames() {
+		return fileNames;
 	}
 	public void indexDirectory(String path) throws IOException {
 		final Path currentWorkingPath = Paths.get(path).toAbsolutePath();
@@ -41,6 +46,7 @@ public class SimpleIndexer {
 				if (file.toString().endsWith(".txt")) {
 					// we have found a .txt file;
 					// then index the file and increase the document ID counter.
+					fileNames.add(file.getFileName().toString());
 					addTokens(file.toFile(), docID ++);
 				}
 				return FileVisitResult.CONTINUE;
