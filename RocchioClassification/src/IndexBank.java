@@ -94,19 +94,11 @@ public class IndexBank {
 		this.PII.resetIndex();
 		this.docLengths = new ArrayList<Double>();
 	}
-
-	// ------------------------------------------------------------------------------------------------------
-
-	private void addScore(String term, double score) {
-		List<PositionalPosting> postings = this.PII.getPostings(term);
-		postings.get(postings.size() - 1).setScore(score);
-	}
 	
 	// ------------------------------------------------------------------------------------------------------
 	
 	private Map<String, Double> addTokens(File file, int docId) {
 		int position = 0;	// keep track of the positions for each token.
-		
 		// Map to keep track of term Frequency inside each document.
 		Map<String, Integer> termFrequency = new HashMap<String, Integer>();
 		TokenStream dp = null;
@@ -126,7 +118,14 @@ public class IndexBank {
 			addTermFrequency(termFrequency, type);
 			position++;	// Increment for each token.
 		}
-		return calcUnitVector(termFrequency);
+		Map<String, Double> uv = calcUnitVector(termFrequency);
+		
+		// Uncomment 124-127 to print the first 30 components of the normalized vector for paper_52.txt
+//		String filename = file.toString().split("/")[file.toString().split("/").length - 1];
+//		if (filename.equals("paper_52.txt")) {
+//			printUnitVectorComponents(uv, filename);
+//		}
+		return uv;
 	}
 	
 	// ------------------------------------------------------------------------------------------------------
@@ -146,14 +145,14 @@ public class IndexBank {
 		for (String term : termFrequency.keySet()) {
 			double score = calculateScore(termFrequency.get(term));
 			unitVector.put(term, score);
-//			System.out.println(term + ": " + score);
 			sum += (score * score); 
 		}
 		double length = Math.sqrt(sum);
+		
+		// Uncomment 153, 156, and 158 to see the magnitude of the 
 //		double sum2 = 0;
 		for (String term : termFrequency.keySet()) {
 			unitVector.replace(term, unitVector.get(term) / length);
-//			System.out.println(term + ": " + unitVector.get(term) / length);
 //			sum2 += Math.pow(unitVector.get(term), 2);
 		}
 //		System.out.println(Math.sqrt(sum2));
@@ -166,4 +165,16 @@ public class IndexBank {
 		return 1 + Math.log(frequency);
 	}
 	
+	// ------------------------------------------------------------------------------------------------------
+	
+	private void printUnitVectorComponents(Map<String, Double> uv, String filename) {
+		System.out.println("Printing first 30 component of normalized vector for " + filename);
+		int component = 0;
+		for (String term : uv.keySet()) {
+			if (component++ >= 30) {
+				break;
+			}
+			System.out.println("\t" + term + ": " + uv.get(term));
+		}
+	}
 }
